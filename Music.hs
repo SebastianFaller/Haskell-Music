@@ -30,3 +30,12 @@ instance Fractional Signal where
 			if y /= 0 then x/y 
 			else 0 
 	fromRational =  constant . fromRational 
+
+integrate :: Signal -> Signal
+integrate (Signal a) = Signal $ sum (zipWith area a (drop 1 a)) 0
+	where 	sum (x:xs) a = (a+x):(sum xs (a+x))
+		area a b = 1/2*a+1/2*b
+
+modulatedSine :: Double -> Signal -> Signal
+modulatedSine c m = Signal $ u (integrate m)
+	where u (Signal i) = map (\x -> sin (2*pi*c+2*pi*x)) i
