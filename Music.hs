@@ -59,4 +59,10 @@ synthLead :: (Double, Double) -> Signal
 synthLead (freq,length) = base * hull
 	where 
 		base = modulatedSine freq (sine freq)
-		hull = hullCurve 0.004 0.2 0.625 noteLength 2.0
+		hull = hullCurve 0.004 0.2 0.625 length 2.0
+
+type Instrument = (Double, Double) -> Signal
+
+play :: Instrument -> [(Double, Double)] -> Signal
+play instrument ((freqSeq, lenSeq):[]) = instrument (freqSeq, lenSeq)
+play instrument ((freqSeq, lenSeq):xs) = append (instrument (freqSeq, lenSeq)) (play instrument xs)
