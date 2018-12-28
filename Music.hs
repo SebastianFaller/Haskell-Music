@@ -39,3 +39,24 @@ integrate (Signal a) = Signal $ sum (zipWith area a (drop 1 a)) 0
 modulatedSine :: Double -> Signal -> Signal
 modulatedSine c m = Signal $ u (integrate m)
 	where u (Signal i) = map (\x -> sin (2*pi*c+2*pi*x)) i
+
+rampUp :: Double -> Signal
+rampUp t = Signal [1/(t*sampleRate)*x | x <-[0..]]
+
+append :: Signal -> Signal -> Signal
+append (Signal a) (Signal b) = Signal $ a++b
+
+hullCurve :: Double -> Double -> Double -> Double -> Double -> Signal
+hullCurve attack decay decayLevel duration release 
+	= append at (append de (append con re))
+	where 
+		at = rampUp attack
+		de = 1-((constant (1-decayLevel))*rampUp (decay-attack))
+		con = trim (constant decayLevel) (duration - attack- decay)
+		re = (constant decayLevel)*(rampUp release)
+
+synthLead :: (Double, Double) -> Signal
+synthLead (freq,length) = base * hull
+	where 
+		base = modulatedSine freq (sine freq)
+		hull = hullCurve 0.004 0.2 0.625 noteLength 2.0
