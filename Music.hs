@@ -32,28 +32,29 @@ instance Fractional Signal where
 	fromRational =  constant . fromRational 
 
 integrate :: Signal -> Signal
-integrate (Signal a) = Signal $ sum (zipWith area a (drop 1 a)) 0
+integrate (Signal a) = Signal $ sum (zipWith area a (drop 1 a)) 0 
 	where 	sum (x:xs) a = (a+x):(sum xs (a+x))
-		area a b = 1/2*a+1/2*b
+		area a b = (1/2*a+1/2*b)*(1/sampleRate)
 
 modulatedSine :: Double -> Signal -> Signal
 modulatedSine c m = Signal $ u (integrate m)
-	where u (Signal i) = map (\x -> sin (2*pi*c+2*pi*x)) i
+	where u (Signal i) = zipWith (\x t-> sin (2*pi*c*t/sampleRate+2*pi*x)) i [0..]
 
 rampUp :: Double -> Signal
-rampUp t = Signal [1/(t*sampleRate)*x | x <-[0..]]
+rampUp t = trim (Signal [x/(t*sampleRate) | x <-[0..]]) t
 
 append :: Signal -> Signal -> Signal
 append (Signal a) (Signal b) = Signal $ a++b
 
 hullCurve :: Double -> Double -> Double -> Double -> Double -> Signal
 hullCurve attack decay decayLevel duration release 
-	= append at (append de (append con re))
+	=  append at (append de (append con re)) 
+	-- = trim (at) (duration+release)  
 	where 
 		at = rampUp attack
-		de = 1-((constant (1-decayLevel))*rampUp (decay-attack))
+		de = 1-((constant (1-decayLevel))*rampUp (decay))
 		con = trim (constant decayLevel) (duration - attack- decay)
-		re = (constant decayLevel)*(rampUp release)
+		re = (constant decayLevel) - (constant decayLevel)*(rampUp release)
 
 synthLead :: (Double, Double) -> Signal
 synthLead (freq,length) = base * hull
